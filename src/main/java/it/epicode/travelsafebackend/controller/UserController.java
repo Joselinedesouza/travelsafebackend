@@ -1,8 +1,10 @@
 package it.epicode.travelsafebackend.controller;
 
 import it.epicode.travelsafebackend.entity.User;
-import it.epicode.travelsafebackend.repository.UserRepository;
+import it.epicode.travelsafebackend.service.UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -12,20 +14,29 @@ import java.util.List;
 @RequiredArgsConstructor
 public class UserController {
 
-    private final UserRepository userRepository;
+    private final UserService userService;
 
+    // ✅ Solo ADMIN può vedere tutti gli utenti
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
-    public List<User> getAllUsers() {
-        return userRepository.findAll();
+    public ResponseEntity<List<User>> getAllUsers() {
+        return ResponseEntity.ok(userService.getAllUsers());
     }
 
-    @PostMapping
-    public User createUser(@RequestBody User user) {
-        return userRepository.save(user);
+    // ✅ Solo ADMIN può disattivare un utente
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/{id}/deactivate")
+    public ResponseEntity<String> deactivateUser(@PathVariable Long id) {
+        userService.deactivateUser(id);
+        return ResponseEntity.ok("Utente disattivato con successo.");
     }
 
-    @GetMapping("/{id}")
-    public User getUserById(@PathVariable Long id) {
-        return userRepository.findById(id).orElseThrow(() -> new RuntimeException("Utente non trovato"));
+    // ✅ Solo ADMIN può riattivare un utente
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/{id}/activate")
+    public ResponseEntity<String> activateUser(@PathVariable Long id) {
+        userService.activateUser(id);
+        return ResponseEntity.ok("Utente riattivato con successo.");
     }
 }
+

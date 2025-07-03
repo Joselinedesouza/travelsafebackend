@@ -4,28 +4,27 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "users")
+@Table(name = "zona_rischio")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class User {
+public class ZonaRischio {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     private String nome;
-    private String cognome;
+    private String descrizione;
 
-    @Column(unique = true)
-    private String email;
+    private double latitudine;
+    private double longitudine;
 
     @Enumerated(EnumType.STRING)
-    private Role role;
+    private LivelloPericolo livelloPericolo;
 
-    private String password;
-
-    @Column(nullable = false)
-    private boolean enabled = true;
+    @ManyToOne
+    @JoinColumn(name = "citta_id")
+    private Citta citta;
 }
