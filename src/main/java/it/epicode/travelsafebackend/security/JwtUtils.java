@@ -6,6 +6,7 @@ import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.JwtParser;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
+import lombok.Getter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -14,16 +15,21 @@ import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
 @Component
+
 public class JwtUtils {
 
     @Value("${jwt.secret}")
     private String secret;
 
+    @Getter
     @Value("${jwt.expiration}")
     private long expiration;
 
+
+
     private SecretKey signingKey;
     private JwtParser jwtParser;
+
 
     @PostConstruct
     public void init() {
@@ -72,5 +78,6 @@ public class JwtUtils {
         } catch (Exception e) {
             return null;
         }
+
     }
 }

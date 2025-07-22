@@ -1,0 +1,128 @@
+[
+  {
+    "id": 1,
+    "nome": "Stazione Centrale Milano",
+    "descrizione": "Punto nevralgico e zona di passaggio",
+    "latitudine": 45.4849,
+    "longitudine": 9.2041,
+    "livelloPericolo": "BASSO",
+    "nomeCitta": "Milano"
+  },
+  {
+    "id": 2,
+    "nome": "Corso Como",
+    "descrizione": "Zona movida, con alta incidenza di furti e borseggi",
+    "latitudine": 45.4850,
+    "longitudine": 9.2045,
+    "livelloPericolo": "ALTO",
+    "nomeCitta": "Milano"
+  },
+  {
+    "id": 3,
+    "nome": "Trastevere Roma",
+    "descrizione": "Quartiere storico con movida",
+    "latitudine": 41.8882,
+    "longitudine": 12.4708,
+    "livelloPericolo": "MEDIO",
+    "nomeCitta": "Roma"
+  },
+  {
+    "id": 4,
+    "nome": "Centro Storico Roma",
+    "descrizione": "Zona turistica con qualche rischio di scippi",
+    "latitudine": 41.9000,
+    "longitudine": 12.4833,
+    "livelloPericolo": "MEDIO",
+    "nomeCitta": "Roma"
+  },
+  {
+    "id": 5,
+    "nome": "Piazza Garibaldi Napoli",
+    "descrizione": "Area centrale molto trafficata",
+    "latitudine": 40.8522,
+    "longitudine": 14.2681,
+    "livelloPericolo": "BASSO",
+    "nomeCitta": "Milano"
+  },
+  {
+    "id": 6,
+    "nome": "Zona Scippi Napoli Centro",
+    "descrizione": "Zona con segnalazioni frequenti di scippi",
+    "latitudine": 40.8500,
+    "longitudine": 14.2685,
+    "livelloPericolo": "ALTO",
+    "nomeCitta": "Napoli"
+  },
+  {
+    "id": 7,
+    "nome": "Piazza del Duomo Milano",
+    "descrizione": "Zona turistica con presenza di borseggiatori",
+    "latitudine": 45.4642,
+    "longitudine": 9.1900,
+    "livelloPericolo": "MEDIO",
+    "nomeCitta": "Milano"
+  },
+  {
+    "id": 8,
+    "nome": "Quartiere Navigli Milano",
+    "descrizione": "Zona movida serale con rischio medio",
+    "latitudine": 45.4500,
+    "longitudine": 9.1700,
+    "livelloPericolo": "MEDIO",
+    "nomeCitta": "Milano"
+  },
+  {
+    "id": 9,
+    "nome": "Piazza San Marco Venezia",
+    "descrizione": "Area molto affollata, attenzione ai borseggi",
+    "latitudine": 45.4340,
+    "longitudine": 12.3397,
+    "livelloPericolo": "ALTO",
+    "nomeCitta": "Venezia"
+  },
+  {
+    "id": 10,
+    "nome": "Bovisa Milano",
+    "descrizione": "Zona residenziale con presenza universitaria, rischio basso",
+    "latitudine": 45.5075,
+    "longitudine": 9.1800,
+    "livelloPericolo": "BASSO",
+    "nomeCitta": "Milano"
+  },
+  {
+    "id": 11,
+    "nome": "Quarto Oggiaro",
+    "descrizione": "Zona popolare con qualche segnalazione di furti",
+    "latitudine": 45.5230,
+    "longitudine": 9.1300,
+    "livelloPericolo": "MEDIO",
+    "nomeCitta": "Milano"
+  },
+  {
+    "id": 12,
+    "nome": "Niguarda",
+    "descrizione": "Quartiere con ospedale e zone residenziali, rischio medio",
+    "latitudine": 45.5200,
+    "longitudine": 9.1900,
+    "livelloPericolo": "MEDIO",
+    "nomeCitta": "Milano"
+  },
+  {
+    "id": 13,
+    "nome": "Baggio",
+    "descrizione": "Zona periferica con comunità attiva, rischio basso",
+    "latitudine": 45.4600,
+    "longitudine": 9.1000,
+    "livelloPericolo": "BASSO",
+    "nomeCitta": "Milano"
+  },
+  {
+    "id": 14,
+    "nome": "Lambrate",
+    "descrizione": "Zona universitaria e industriale, rischio ALTO",
+    "latitudine": 45.4900,
+    "longitudine": 9.2300,
+    "livelloPericolo": "ALTO",
+    "nomeCitta": "Milano"
+  }
+]
