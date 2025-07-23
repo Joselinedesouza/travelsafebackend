@@ -15,7 +15,7 @@ public class WebConfig {
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/**")
                         // Per sviluppo puoi mettere "*" oppure l'URL esatto del frontend
-                        .allowedOrigins("http://localhost:5173", "http://localhost:3000")
+                        .allowedOrigins("http://localhost:5173","https://frontend-travelsafe.vercel.app")
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
                         .allowedHeaders("*")
                         .allowCredentials(true)
