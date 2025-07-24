@@ -7,5 +7,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
 
 public interface CittaRepository extends JpaRepository<Citta, Long> {
-    Optional<Citta> findByNome(String nome);
+    Optional<Citta> findByNomeIgnoreCase(String nome);
 }

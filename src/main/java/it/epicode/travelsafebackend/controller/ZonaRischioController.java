@@ -1,5 +1,6 @@
 package it.epicode.travelsafebackend.controller;
 
+import it.epicode.travelsafebackend.dto.ZonaPerCittaStatDTO;
 import it.epicode.travelsafebackend.dto.ZonaRischioRequestDTO;
 import it.epicode.travelsafebackend.dto.ZonaRischioResponseDTO;
 import it.epicode.travelsafebackend.service.ZonaRischioService;
@@ -12,19 +13,19 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/zone-rischio")
+@RequestMapping({"/api/zone-rischio", "/api/zone-rischi"})
 @RequiredArgsConstructor
 public class ZonaRischioController {
 
     private final ZonaRischioService zonaRischioService;
 
-    // Recupera tutte le zone rischio, accesso libero
+    // Recupera tutte le zone rischio
     @GetMapping
     public List<ZonaRischioResponseDTO> getAll() {
         return zonaRischioService.getAll();
     }
 
-    // Crea una nuova zona rischio, solo ADMIN
+    // Crea una nuova zona rischio (solo admin)
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ZonaRischioResponseDTO> create(@RequestBody @Valid ZonaRischioRequestDTO dto) {
@@ -32,19 +33,25 @@ public class ZonaRischioController {
         return ResponseEntity.status(201).body(created);
     }
 
-    // Recupera una zona rischio per id, accesso libero
+    // Statistiche per città con livello pericolo prevalente (solo admin)
+    @GetMapping("/stats")
+    @PreAuthorize("hasRole('ADMIN')")
+    public List<ZonaPerCittaStatDTO> getStatisticaZone() {
+        return zonaRischioService.getStatisticheZonePerCitta();
+    }
+
+    // Recupera zona rischio per ID
     @GetMapping("/{id}")
     public ResponseEntity<ZonaRischioResponseDTO> getById(@PathVariable Long id) {
         try {
             ZonaRischioResponseDTO zona = zonaRischioService.getById(id);
             return ResponseEntity.ok(zona);
         } catch (RuntimeException e) {
-            // Se non trovato ritorna 404
             return ResponseEntity.notFound().build();
         }
     }
 
-    // Aggiorna una zona rischio per id, solo ADMIN
+    // Aggiorna zona rischio (solo admin)
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ZonaRischioResponseDTO> update(
@@ -55,12 +62,11 @@ public class ZonaRischioController {
             ZonaRischioResponseDTO updated = zonaRischioService.update(dto);
             return ResponseEntity.ok(updated);
         } catch (RuntimeException e) {
-            // Se la zona non esiste, ritorna 404
             return ResponseEntity.notFound().build();
         }
     }
 
-    // Elimina una zona rischio per id, solo ADMIN
+    // Elimina zona rischio (solo admin)
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
@@ -72,7 +78,7 @@ public class ZonaRischioController {
         }
     }
 
-    // Cerca zone rischio entro un raggio geografico, accesso libero
+    // Cerca zone per prossimità geografica
     @GetMapping("/search")
     public List<ZonaRischioResponseDTO> findByProximity(
             @RequestParam double lat,

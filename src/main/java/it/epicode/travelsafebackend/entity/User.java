@@ -43,7 +43,9 @@ public class User {
     private String telefono;
 
     private String bio;
-
+    @OneToMany(mappedBy = "user", cascade = CascadeType.REMOVE, orphanRemoval = true)
+    @JsonIgnore
+    private List<Recensione> recensioni = new ArrayList<>();
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
     private Set<PasswordResetToken> tokens = new HashSet<>();

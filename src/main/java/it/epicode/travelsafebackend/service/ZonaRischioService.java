@@ -2,10 +2,12 @@ package it.epicode.travelsafebackend.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.jsonwebtoken.io.IOException;
+import it.epicode.travelsafebackend.dto.ZonaPerCittaStatDTO;
+import it.epicode.travelsafebackend.dto.ZonaRischioJsonDTO;
 import it.epicode.travelsafebackend.dto.ZonaRischioRequestDTO;
 import it.epicode.travelsafebackend.dto.ZonaRischioResponseDTO;
 import it.epicode.travelsafebackend.entity.Citta;
+import it.epicode.travelsafebackend.entity.LivelloPericolo;
 import it.epicode.travelsafebackend.entity.ZonaRischio;
 import it.epicode.travelsafebackend.repository.CittaRepository;
 import it.epicode.travelsafebackend.repository.ZonaRischioRepository;
@@ -21,27 +23,47 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ZonaRischioService {
 
-    private final ZonaRischioRepository zonaRischioRepository;  // Repository JPA per zone rischio
-    private final CittaRepository cittaRepository;             // Repository JPA per città
-    private final ObjectMapper objectMapper;                   // Mapper Jackson per leggere JSON
-
-    private final boolean usaDatiDemo = true;                  // Flag per usare dati demo JSON o DB
-
-    private List<ZonaRischio> datiDemo = new ArrayList<>();    // Lista dati demo caricata da JSON
+    private final ZonaRischioRepository zonaRischioRepository;
+    private final CittaRepository cittaRepository;
+    private final ObjectMapper objectMapper;
+    private final boolean usaDatiDemo = false;
+    private List<ZonaRischio> datiDemo = new ArrayList<>();
 
     @PostConstruct
     public void init() {
-        if (usaDatiDemo) {
-            try {
-                ClassPathResource resource = new ClassPathResource("demo_zone.json"); // Prendi il file JSON da resources
-                datiDemo = objectMapper.readValue(
-                        resource.getInputStream(),
-                        new TypeReference<List<ZonaRischio>>() {}
-                );  // Deserializza JSON in lista di ZonaRischio
-            } catch (java.io.IOException e) {
-                e.printStackTrace();
-                datiDemo = new ArrayList<>();  // In caso di errore, lista vuota
+        try {
+            ClassPathResource resource = new ClassPathResource("demo_zone.json");
+            List<ZonaRischioJsonDTO> zoneDemo = objectMapper.readValue(
+                    resource.getInputStream(),
+                    new TypeReference<List<ZonaRischioJsonDTO>>() {}
+            );
+
+            for (ZonaRischioJsonDTO dto : zoneDemo) {
+                boolean exists = zonaRischioRepository.existsByNomeAndLatitudineAndLongitudine(
+                        dto.getNome(), dto.getLatitudine(), dto.getLongitudine()
+                );
+
+                if (!exists) {
+                    Citta citta = cittaRepository.findByNomeIgnoreCase(dto.getNomeCitta())
+                            .orElseGet(() -> cittaRepository.save(
+                                    Citta.builder().nome(dto.getNomeCitta()).build()
+                            ));
+
+                    ZonaRischio zona = ZonaRischio.builder()
+                            .nome(dto.getNome())
+                            .descrizione(dto.getDescrizione())
+                            .latitudine(dto.getLatitudine())
+                            .longitudine(dto.getLongitudine())
+                            .livelloPericolo(LivelloPericolo.valueOf(dto.getLivelloPericolo()))
+                            .citta(citta)
+                            .build();
+
+                    zonaRischioRepository.save(zona);
+                }
             }
+
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
@@ -49,14 +71,10 @@ public class ZonaRischioService {
         Citta citta;
 
         if (dto.getCittaId() != null) {
-            // Se l'id città è fornito, cerca la città nel DB o lancia eccezione
             citta = cittaRepository.findById(dto.getCittaId())
                     .orElseThrow(() -> new RuntimeException("Città non trovata con id: " + dto.getCittaId()));
         } else {
-            // Se non è fornito l'id, usa il nome città per crearla (necessario)
-            String nomeCitta = (dto.getNomeCitta() != null && !dto.getNomeCitta().isBlank())
-                    ? dto.getNomeCitta()
-                    : null;
+            String nomeCitta = (dto.getNomeCitta() != null && !dto.getNomeCitta().isBlank()) ? dto.getNomeCitta() : null;
 
             if (nomeCitta == null || nomeCitta.isBlank()) {
                 throw new RuntimeException("Nome città obbligatorio se non viene fornito l'id");
@@ -64,10 +82,9 @@ public class ZonaRischioService {
 
             citta = new Citta();
             citta.setNome(nomeCitta);
-            citta = cittaRepository.save(citta);  // Salva nuova città
+            citta = cittaRepository.save(citta);
         }
 
-        // Crea nuova ZonaRischio basandosi sui dati ricevuti e associa la città
         ZonaRischio zona = ZonaRischio.builder()
                 .nome(dto.getNome())
                 .descrizione(dto.getDescrizione())
@@ -77,28 +94,21 @@ public class ZonaRischioService {
                 .citta(citta)
                 .build();
 
-        zonaRischioRepository.save(zona);  // Salva la zona rischio nel DB
+        zonaRischioRepository.save(zona);
 
-        return toResponseDTO(zona);  // Ritorna DTO per risposta API
+        return toResponseDTO(zona);
     }
 
     public List<ZonaRischioResponseDTO> getAll() {
         if (usaDatiDemo) {
-            // Se demo abilitato, ritorna dati demo caricati dal JSON mappandoli in DTO
-            return datiDemo.stream()
-                    .map(this::toResponseDTO)
-                    .toList();
+            return datiDemo.stream().map(this::toResponseDTO).toList();
         }
-        // Altrimenti leggi dal DB e mappa in DTO
-        return zonaRischioRepository.findAll().stream()
-                .map(this::toResponseDTO)
-                .toList();
+        return zonaRischioRepository.findAll().stream().map(this::toResponseDTO).toList();
     }
 
     public ZonaRischioResponseDTO getById(Long id) {
         ZonaRischio zona = zonaRischioRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Zona non trovata con id: " + id));
-
         return toResponseDTO(zona);
     }
 
@@ -107,7 +117,17 @@ public class ZonaRischioService {
         ZonaRischio zona = zonaRischioRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Zona non trovata con id: " + id));
 
-        zona.setLivelloPericolo(dto.getLivelloPericolo());  // Aggiorna solo livello di pericolo
+        zona.setNome(dto.getNome());
+        zona.setDescrizione(dto.getDescrizione());
+        zona.setLatitudine(dto.getLatitudine());
+        zona.setLongitudine(dto.getLongitudine());
+        zona.setLivelloPericolo(dto.getLivelloPericolo());
+
+        if (dto.getNomeCitta() != null && !dto.getNomeCitta().isBlank()) {
+            Citta citta = cittaRepository.findByNomeIgnoreCase(dto.getNomeCitta())
+                    .orElseGet(() -> cittaRepository.save(Citta.builder().nome(dto.getNomeCitta()).build()));
+            zona.setCitta(citta);
+        }
 
         zonaRischioRepository.save(zona);
 
@@ -120,22 +140,24 @@ public class ZonaRischioService {
         zonaRischioRepository.delete(zona);
     }
 
+    public List<ZonaPerCittaStatDTO> getStatisticheZonePerCitta() {
+        return zonaRischioRepository.countZonePerCittaConLivelloPrevalente();
+    }
+
     public List<ZonaRischioResponseDTO> findByProximity(double lat, double lng, double radiusKm) {
         if (usaDatiDemo) {
-            // Cerca demo filtrando per distanza dal punto dato (lat, lng)
             return datiDemo.stream()
                     .filter(z -> distanzaKm(lat, lng, z.getLatitudine(), z.getLongitudine()) <= radiusKm)
                     .map(this::toResponseDTO)
                     .toList();
         }
-        // Cerca nel DB con query custom
         return zonaRischioRepository.findByProximity(lat, lng, radiusKm).stream()
                 .map(this::toResponseDTO)
                 .toList();
     }
 
     private double distanzaKm(double lat1, double lon1, double lat2, double lon2) {
-        final int R = 6371; // Raggio Terra in km
+        final int R = 6371;
         double latDistance = Math.toRadians(lat2 - lat1);
         double lonDistance = Math.toRadians(lon2 - lon1);
         double a = Math.sin(latDistance / 2) * Math.sin(latDistance / 2)
