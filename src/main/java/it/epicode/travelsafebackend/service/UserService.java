@@ -58,8 +58,16 @@ public class UserService {
         if (bio != null) user.setBio(bio);
 
         if (immagineProfilo != null && !immagineProfilo.isEmpty()) {
-            String imageUrl = storageService.storeFile(immagineProfilo);
-            user.setImmagineProfilo(imageUrl);
+            try {
+                System.out.println("➡️ Ricevuto file: " + immagineProfilo.getOriginalFilename());
+                String imageUrl = storageService.storeFile(immagineProfilo);
+                user.setImmagineProfilo(imageUrl);
+            } catch (Exception e) {
+                System.err.println("❌ Errore durante upload immagine profilo: " + e.getMessage());
+
+            }
+        } else {
+            System.out.println("⚠️ Nessun file immagine ricevuto.");
         }
 
         userRepository.save(user);

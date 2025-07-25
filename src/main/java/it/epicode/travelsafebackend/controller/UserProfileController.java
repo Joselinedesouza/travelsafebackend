@@ -12,6 +12,11 @@ import java.security.Principal;
 
 @RestController
 @RequestMapping("/api/user")
+@CrossOrigin(origins = {
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "https://frontend-travelsafe.vercel.app"
+}, allowCredentials = "true")
 @RequiredArgsConstructor
 public class UserProfileController {
 
