@@ -20,15 +20,15 @@ public class DataInitializer implements CommandLineRunner {
     @Override
     public void run(String... args) throws Exception {
         System.out.println("DataInitializer run called");
-        var email = "joselinedesouza022@gmail.com";
+        var email = "safetravel130@gmail.com";
         if (userRepository.findByEmail(email).isEmpty()) {
             User admin = new User();
             admin.setEmail(email);
             admin.setPassword(passwordEncoder.encode("adminPassword123"));
             admin.setRole(Role.ADMIN);
             admin.setEnabled(true);
-            admin.setNome("Admin");
-            admin.setCognome("Superuser");
+            admin.setNome("Travel");
+            admin.setCognome("Safe");
             admin.setNickname("admin");
             userRepository.save(admin);
             System.out.println("Admin creato con ID: " + admin.getId());

@@ -4,6 +4,7 @@ import it.epicode.travelsafebackend.exception.CustomOAuth2SuccessHandler;
 import it.epicode.travelsafebackend.security.JwtFilter;
 import it.epicode.travelsafebackend.service.CustomOAuth2UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -21,6 +22,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
+
 @Configuration
 @RequiredArgsConstructor
 @EnableMethodSecurity
@@ -30,6 +32,9 @@ public class SecurityConfig {
     private final CustomOAuth2UserService customOAuth2UserService;
     private final CustomOAuth2SuccessHandler customOAuth2SuccessHandler;
 
+    @Value("${app.frontend.base-url:https://frontend-travelsafe.vercel.app}")
+    private String frontendBaseUrl;
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
@@ -38,14 +43,19 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost:5174", "https://frontend-travelsafe.vercel.app"));
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
-        config.setAllowedHeaders(List.of("*")); // Permetti tutti gli header
+        // Origini consentite (dinamico da env) + localhost per sviluppo
+        config.setAllowedOrigins(List.of(frontendBaseUrl, "http://localhost:5173", "http://localhost:5174"));
+        // In alternativa, se vuoi supportare sottodomini, usa:
+        // config.setAllowedOriginPatterns(List.of(frontendBaseUrl, "http://localhost:*"));
+
+        config.setAllowedMethods(List.of("GET","POST","PUT","DELETE","PATCH","OPTIONS"));
+        config.setAllowedHeaders(List.of("*"));
+        config.setExposedHeaders(List.of("Authorization", "Location"));
         config.setAllowCredentials(true);
+        config.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
-
         return source;
     }
 
@@ -54,33 +64,38 @@ public class SecurityConfig {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
+                .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // Endpoints pubblici
-                        .requestMatchers("/", "/index", "/public/**", "/api/auth/**", "/oauth2/**").permitAll()
+                        // Preflight
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+                        // Pubblici
+                        .requestMatchers("/", "/index", "/public/**", "/api/auth/**").permitAll()
+                        .requestMatchers("/oauth2/**", "/login/oauth2/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/location/save").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/citta/**", "/api/poi/**", "/api/zone-rischio/**").permitAll()
+                        .requestMatchers("/actuator/health").permitAll() // utile per health check
 
-                        // Endpoints che richiedono autenticazione
+                        // Autenticati
                         .requestMatchers("/api/user/profile").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/zone-rischio/**").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/api/zone-rischio/**").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/api/users/me").authenticated()
                         .requestMatchers("/api/viaggi/mine").authenticated()
 
-                        // Ruolo ADMIN richiesto
+                        // SOLO ADMIN (attenzione all'ordine: questa viene prima di regole generiche)
                         .requestMatchers(HttpMethod.DELETE, "/api/zone-rischio/**").hasRole("ADMIN")
                         .requestMatchers("/api/users/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/api/users/**").hasRole("ADMIN")
                         .requestMatchers("/api/notifiche").hasRole("ADMIN")
 
-                        // Altre richieste richiedono autenticazione
+                        // Tutto il resto autenticato
                         .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth2 -> oauth2
                         .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
                         .successHandler(customOAuth2SuccessHandler)
                 )
-                .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .formLogin(form -> form.disable());
 
