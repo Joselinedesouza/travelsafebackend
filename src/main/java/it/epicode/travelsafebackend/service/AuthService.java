@@ -11,9 +11,7 @@ import it.epicode.travelsafebackend.repository.UserRepository;
 import it.epicode.travelsafebackend.security.JwtUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -24,30 +22,26 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final AuthenticationManager authenticationManager;
     private final JwtUtils jwtUtils;
 
     public UserResponseDTO login(LoginRequestDTO loginRequest) {
-        try {
-            authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(
-                            loginRequest.getEmail(), loginRequest.getPassword()
-                    )
-            );
-        } catch (BadCredentialsException ex) {
-            log.warn("Login fallito per email: {}", loginRequest.getEmail());
+        // normalizza l'email (trim per sicurezza)
+        final String email = loginRequest.getEmail().trim();
+
+        // 1) trova utente (ignore case)
+        User user = userRepository.findByEmailIgnoreCase(email)
+                .orElseThrow(() -> new BadCredentialsException("Credenziali non valide"));
+
+        // 2) verifica password con encoder
+        if (!passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())) {
             throw new BadCredentialsException("Credenziali non valide");
-        } catch (Exception ex) {
-            log.error("Errore durante login per email {}: {}", loginRequest.getEmail(), ex.getMessage());
-            throw new RuntimeException("Errore durante l'autenticazione");
         }
 
-        User user = userRepository.findByEmail(loginRequest.getEmail())
-                .orElseThrow(() -> new RuntimeException("Utente non trovato"));
-
+        // 3) genera JWT
         String role = user.getRole().toString();
         String token = jwtUtils.generateToken(user.getEmail(), role);
 
+        // 4) ritorna DTO
         return UserResponseDTO.builder()
                 .nome(user.getNome())
                 .cognome(user.getCognome())
@@ -61,8 +55,12 @@ public class AuthService {
     }
 
     public RegisterResponseDTO register(RegisterUserDTO request) {
-        // Validazione password
-        if (request.getPassword() == null || request.getPassword().length() < 8
+        // normalizza email e ruolo
+        final String email = request.getEmail().trim().toLowerCase();
+
+        // validazione password
+        if (request.getPassword() == null
+                || request.getPassword().length() < 8
                 || !request.getPassword().matches(".*[A-Z].*")
                 || !request.getPassword().matches(".*[a-z].*")
                 || !request.getPassword().matches(".*\\d.*")
@@ -71,7 +69,8 @@ public class AuthService {
                     "La password deve contenere almeno 8 caratteri, una maiuscola, una minuscola, un numero e un carattere speciale");
         }
 
-        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+        // unicità email (case-insensitive)
+        if (userRepository.existsByEmailIgnoreCase(email)) {
             throw new EmailAlreadyUsedException("Questa email " + request.getEmail() + " è già registrata");
         }
 
@@ -86,7 +85,7 @@ public class AuthService {
         User newUser = User.builder()
                 .nome(request.getNome())
                 .cognome(request.getCognome())
-                .email(request.getEmail())
+                .email(email) // salva sempre lowercase
                 .password(passwordEncoder.encode(request.getPassword()))
                 .role(role)
                 .enabled(true)

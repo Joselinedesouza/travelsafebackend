@@ -43,6 +43,11 @@ public class AuthController {
         RegisterResponseDTO response = authService.register(request);
         return ResponseEntity.ok(response);
     }
+    @PostMapping("/request-reset")
+    public ResponseEntity<?> requestPasswordReset(@Valid @RequestBody PasswordResetRequestDTO request) {
+        passwordService.requestPasswordReset(request.getEmail());
+        return ResponseEntity.ok("Se l'email è registrata, riceverai un link per reimpostare la password.");
+    }
     @PostMapping("/reset-password")
     public ResponseEntity<String> resetPassword(@Valid @RequestBody PasswordChangeDTO request) {
         passwordService.changePassword(request.getToken(), request.getNewPassword());

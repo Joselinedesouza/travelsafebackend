@@ -16,7 +16,7 @@ public class PasswordResetToken {
         @GeneratedValue(strategy = GenerationType.IDENTITY)
         private Long id;
 
-        @Column(nullable = false, unique = true)
+        @Column(nullable = false, unique = true, length = 100)
         private String token;
 
         @ManyToOne(fetch = FetchType.LAZY)
@@ -30,5 +30,9 @@ public class PasswordResetToken {
                 this.token = token;
                 this.user = user;
                 this.expiryDate = expiryDate;
+        }
+
+        public boolean isExpired() {
+                return expiryDate.isBefore(LocalDateTime.now());
         }
 }
