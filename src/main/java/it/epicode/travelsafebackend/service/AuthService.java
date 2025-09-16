@@ -24,24 +24,34 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtils jwtUtils;
 
+    // Per inviare il token di verifica all’utente appena registrato
+    private final EmailVerificationService emailVerificationService;
+
+    /**
+     * Login:
+     * - cerca utente per email (case-insensitive)
+     * - verifica password con PasswordEncoder
+     * - blocca accesso se l’email non è stata verificata (enabled=false)
+     * - genera e ritorna JWT
+     */
     public UserResponseDTO login(LoginRequestDTO loginRequest) {
-        // normalizza l'email (trim per sicurezza)
         final String email = loginRequest.getEmail().trim();
 
-        // 1) trova utente (ignore case)
         User user = userRepository.findByEmailIgnoreCase(email)
                 .orElseThrow(() -> new BadCredentialsException("Credenziali non valide"));
 
-        // 2) verifica password con encoder
         if (!passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())) {
             throw new BadCredentialsException("Credenziali non valide");
         }
 
-        // 3) genera JWT
+        if (!user.isEnabled()) {
+            // messaggio chiaro per il FE
+            throw new BadCredentialsException("Account non verificato. Controlla la mail.");
+        }
+
         String role = user.getRole().toString();
         String token = jwtUtils.generateToken(user.getEmail(), role);
 
-        // 4) ritorna DTO
         return UserResponseDTO.builder()
                 .nome(user.getNome())
                 .cognome(user.getCognome())
@@ -54,11 +64,19 @@ public class AuthService {
                 .build();
     }
 
+    /**
+     * Register:
+     * - normalizza l’email a lowercase
+     * - valida la password
+     * - verifica unicità email (case-insensitive)
+     * - determina il ruolo (fallback USER)
+     * - salva utente con enabled=false
+     * - invia email di verifica con token
+     */
     public RegisterResponseDTO register(RegisterUserDTO request) {
-        // normalizza email e ruolo
         final String email = request.getEmail().trim().toLowerCase();
 
-        // validazione password
+        // Validazione password (come avevi già)
         if (request.getPassword() == null
                 || request.getPassword().length() < 8
                 || !request.getPassword().matches(".*[A-Z].*")
@@ -69,11 +87,12 @@ public class AuthService {
                     "La password deve contenere almeno 8 caratteri, una maiuscola, una minuscola, un numero e un carattere speciale");
         }
 
-        // unicità email (case-insensitive)
+        // Unicità email (case-insensitive)
         if (userRepository.existsByEmailIgnoreCase(email)) {
             throw new EmailAlreadyUsedException("Questa email " + request.getEmail() + " è già registrata");
         }
 
+        // Parsing ruolo con fallback a USER
         Role role;
         try {
             role = Role.valueOf(request.getRole().toUpperCase());
@@ -82,16 +101,21 @@ public class AuthService {
             role = Role.USER;
         }
 
+        // Creazione utente: ENABLED = false finché non verifica l’email
         User newUser = User.builder()
                 .nome(request.getNome())
                 .cognome(request.getCognome())
                 .email(email) // salva sempre lowercase
                 .password(passwordEncoder.encode(request.getPassword()))
                 .role(role)
-                .enabled(true)
+                .enabled(false) // <--- importante per la verifica email
                 .build();
 
         userRepository.save(newUser);
-        return new RegisterResponseDTO("Utente registrato con successo");
+
+        // Invio mail di verifica (token + link)
+        emailVerificationService.sendVerificationEmail(newUser);
+
+        return new RegisterResponseDTO("Registrazione completata! Controlla la mail per verificare l'account.");
     }
 }

@@ -21,7 +21,9 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Configuration
 @RequiredArgsConstructor
@@ -32,8 +34,15 @@ public class SecurityConfig {
     private final CustomOAuth2UserService customOAuth2UserService;
     private final CustomOAuth2SuccessHandler customOAuth2SuccessHandler;
 
+    // URL FE "principale" (utile se ti serve altrove)
     @Value("${app.frontend.base-url:https://frontend-travelsafe.vercel.app}")
     private String frontendBaseUrl;
+
+    // Lista di origin consentiti per CORS, separati da virgola (dev + prod)
+    // Esempio consigliato in application.properties:
+    // cors.allowed-origins=https://frontend-travelsafe.vercel.app,http://localhost:5173
+    @Value("${cors.allowed-origins:https://frontend-travelsafe.vercel.app,http://localhost:*}")
+    private String corsAllowedOrigins;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -43,10 +52,16 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        // Origini consentite (dinamico da env) + localhost per sviluppo
-        config.setAllowedOrigins(List.of(frontendBaseUrl, "http://localhost:5173", "http://localhost:5174"));
-        // In alternativa, se vuoi supportare sottodomini, usa:
-        // config.setAllowedOriginPatterns(List.of(frontendBaseUrl, "http://localhost:*"));
+
+        // Normalizza e applica gli origin (senza trailing slash)
+        List<String> origins = Arrays.stream(corsAllowedOrigins.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isBlank())
+                .map(s -> s.replaceAll("/+$", "")) // rimuove "/" finale
+                .collect(Collectors.toList());
+
+        // Usa patterns per supportare wildcard tipo "http://localhost:*"
+        config.setAllowedOriginPatterns(origins);
 
         config.setAllowedMethods(List.of("GET","POST","PUT","DELETE","PATCH","OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
@@ -70,11 +85,16 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
                         // Pubblici
-                        .requestMatchers("/", "/index", "/public/**", "/api/auth/**").permitAll()
+                        .requestMatchers("/", "/index", "/public/**").permitAll()
                         .requestMatchers("/oauth2/**", "/login/oauth2/**").permitAll()
+
+                        // Tutta l'area auth è pubblica (login, register, reset, verify, resend, ecc.)
+                        .requestMatchers("/api/auth/**").permitAll()
+
+                        // Endpoint pubblici specifici (separati, solo per chiarezza)
                         .requestMatchers(HttpMethod.POST, "/api/location/save").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/citta/**", "/api/poi/**", "/api/zone-rischio/**").permitAll()
-                        .requestMatchers("/actuator/health").permitAll() // utile per health check
+                        .requestMatchers("/actuator/health").permitAll()
 
                         // Autenticati
                         .requestMatchers("/api/user/profile").authenticated()
@@ -83,7 +103,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/api/users/me").authenticated()
                         .requestMatchers("/api/viaggi/mine").authenticated()
 
-                        // SOLO ADMIN (attenzione all'ordine: questa viene prima di regole generiche)
+                        // SOLO ADMIN (metti prima di regole generiche)
                         .requestMatchers(HttpMethod.DELETE, "/api/zone-rischio/**").hasRole("ADMIN")
                         .requestMatchers("/api/users/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/api/users/**").hasRole("ADMIN")
